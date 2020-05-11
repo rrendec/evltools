@@ -24,7 +24,9 @@ function sendTpi($cmd, $data)
     global $sock;
 
     $checksum = tpiChecksum($cmd . $data);
-    printf("[%ssend%s] %s%s%s%s%s%s%s\n",
+    $now = new DateTime();
+    printf("[%s] [%ssend%s] %s%s%s%s%s%s%s\n",
+        $now->format('Y-m-d H:i:s.u'),
         ANSI_COLOR_LIGHT_GREEN,
         ANSI_COLOR_RESET,
         ANSI_COLOR_LIGHT_CYAN,
@@ -53,7 +55,9 @@ function handleCmdUser($data)
 
 function handleCmdTpi($data)
 {
-    printf("[%srecv%s] %s%s%s%s%s%s%s\n",
+    $now = new DateTime();
+    printf("[%s] [%srecv%s] %s%s%s%s%s%s%s\n",
+        $now->format('Y-m-d H:i:s.u'),
         ANSI_COLOR_LIGHT_RED,
         ANSI_COLOR_RESET,
         ANSI_COLOR_LIGHT_CYAN,
