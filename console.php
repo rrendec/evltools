@@ -134,7 +134,9 @@ while (true) {
         if ($stream == $in) {
             splitCmd($buf1, $data);
             foreach ($data as $line) {
-                handleCmdUser($line);
+                if (strlen($line)) {
+                    handleCmdUser($line);
+                }
             }
         } elseif ($stream == $sock) {
             splitCmd($buf2, $data);
