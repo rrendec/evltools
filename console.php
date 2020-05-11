@@ -3,6 +3,13 @@ error_reporting(E_ALL);
 
 include_once('config.php');
 
+define('ANSI_COLOR_RESET',          "\033[0m");
+define('ANSI_COLOR_LIGHT_RED',      "\033[91m");
+define('ANSI_COLOR_LIGHT_GREEN',    "\033[92m");
+define('ANSI_COLOR_LIGHT_YELLOW',   "\033[93m");
+define('ANSI_COLOR_LIGHT_MAGENTA',  "\033[95m");
+define('ANSI_COLOR_LIGHT_CYAN',     "\033[96m");
+
 function tpiChecksum($str)
 {
     $sum = 0;
@@ -16,16 +23,28 @@ function sendTpi($cmd, $data)
 {
     global $sock;
 
-    $cmd .= $data;
-    $cmd .= tpiChecksum($cmd);
-    printf("[send] %s\n", $cmd);
-    fwrite($sock, $cmd . "\r\n");
+    $checksum = tpiChecksum($cmd . $data);
+    printf("[%ssend%s] %s%s%s%s%s%s%s\n",
+        ANSI_COLOR_LIGHT_GREEN,
+        ANSI_COLOR_RESET,
+        ANSI_COLOR_LIGHT_CYAN,
+        $cmd,
+        ANSI_COLOR_RESET,
+        $data,
+        ANSI_COLOR_LIGHT_MAGENTA,
+        $checksum,
+        ANSI_COLOR_RESET
+    );
+    fwrite($sock, $cmd . $data . $checksum . "\r\n");
 }
 
 function handleCmdUser($data)
 {
     if (strlen($data) < 3) {
-        printf("%% Invalid Length\n");
+        printf("%% %sInvalid Length%s\n",
+            ANSI_COLOR_LIGHT_YELLOW,
+            ANSI_COLOR_RESET
+        );
         return;
     }
 
@@ -34,23 +53,42 @@ function handleCmdUser($data)
 
 function handleCmdTpi($data)
 {
-    printf("[recv] %s\n", $data);
+    printf("[%srecv%s] %s%s%s%s%s%s%s\n",
+        ANSI_COLOR_LIGHT_RED,
+        ANSI_COLOR_RESET,
+        ANSI_COLOR_LIGHT_CYAN,
+        substr($data, 0, 3),
+        ANSI_COLOR_RESET,
+        substr($data, 3, max(0, strlen($data) - 5)),
+        ANSI_COLOR_LIGHT_MAGENTA,
+        substr($data, strlen($data) - 2, 2),
+        ANSI_COLOR_RESET
+    );
 
     if (strlen($data) < 5) {
-        printf("%% Invalid Length\n");
+        printf("%% %sInvalid Length%s\n",
+            ANSI_COLOR_LIGHT_YELLOW,
+            ANSI_COLOR_RESET
+        );
         return;
     }
 
     $checksum = substr($data, -2);
     $data = substr($data, 0, strlen($data) - 2);
     if ($checksum !== tpiChecksum($data)) {
-        printf("%% Invalid Checksum\n");
+        printf("%% %sInvalid Checksum%s\n",
+            ANSI_COLOR_LIGHT_YELLOW,
+            ANSI_COLOR_RESET
+        );
         return;
     }
 
     $cmd = substr($data, 0, 3);
     if (!ctype_digit($cmd)) {
-        printf("%% Invalid Command\n");
+        printf("%% %sInvalid Command%s\n",
+            ANSI_COLOR_LIGHT_YELLOW,
+            ANSI_COLOR_RESET
+        );
         return;
     }
 
