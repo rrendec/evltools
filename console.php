@@ -7,6 +7,7 @@ define('ANSI_COLOR_RESET',          "\033[0m");
 define('ANSI_COLOR_LIGHT_RED',      "\033[91m");
 define('ANSI_COLOR_LIGHT_GREEN',    "\033[92m");
 define('ANSI_COLOR_LIGHT_YELLOW',   "\033[93m");
+define('ANSI_COLOR_LIGHT_BLUE',     "\033[94m");
 define('ANSI_COLOR_LIGHT_MAGENTA',  "\033[95m");
 define('ANSI_COLOR_LIGHT_CYAN',     "\033[96m");
 
@@ -40,13 +41,24 @@ function sendTpi($cmd, $data)
     fwrite($sock, $cmd . $data . $checksum . "\r\n");
 }
 
+function userMsg($level, $msg)
+{
+    static $colors = [
+        ANSI_COLOR_LIGHT_BLUE,
+        ANSI_COLOR_LIGHT_YELLOW,
+    ];
+
+    printf("%% %s%s%s\n",
+        $colors[$level],
+        $msg,
+        ANSI_COLOR_RESET
+    );
+}
+
 function handleCmdUser($data)
 {
     if (strlen($data) < 3) {
-        printf("%% %sInvalid Length%s\n",
-            ANSI_COLOR_LIGHT_YELLOW,
-            ANSI_COLOR_RESET
-        );
+        userMsg(1, 'Invalid Length');
         return;
     }
 
@@ -55,6 +67,13 @@ function handleCmdUser($data)
 
 function handleCmdTpi($data)
 {
+    static $loginTable = [
+        'Password Incorrect',
+        'Password Correct',
+        'Timeout',
+        'Password Required',
+    ];
+
     $now = new DateTime();
     printf("[%s] [%srecv%s] %s%s%s%s%s%s%s\n",
         $now->format('Y-m-d H:i:s.u'),
@@ -70,38 +89,48 @@ function handleCmdTpi($data)
     );
 
     if (strlen($data) < 5) {
-        printf("%% %sInvalid Length%s\n",
-            ANSI_COLOR_LIGHT_YELLOW,
-            ANSI_COLOR_RESET
-        );
+        userMsg(1, 'Invalid Length');
         return;
     }
 
     $checksum = substr($data, -2);
     $data = substr($data, 0, strlen($data) - 2);
     if ($checksum !== tpiChecksum($data)) {
-        printf("%% %sInvalid Checksum%s\n",
-            ANSI_COLOR_LIGHT_YELLOW,
-            ANSI_COLOR_RESET
-        );
+        userMsg(1, 'Invalid Checksum');
         return;
     }
 
     $cmd = substr($data, 0, 3);
     if (!ctype_digit($cmd)) {
-        printf("%% %sInvalid Command%s\n",
-            ANSI_COLOR_LIGHT_YELLOW,
-            ANSI_COLOR_RESET
-        );
+        userMsg(1, 'Invalid Command');
         return;
     }
 
     $data = substr($data, 3);
 
     switch ($cmd) {
+    case '500':
+        userMsg(0, 'Command Acknowledge: ' . $data);
+        break;
+    case '501':
+        userMsg(1, 'Command Error');
+        break;
     case '505':
-        if ($data[0] == '3') {
-            sendTpi('005', substr(TPI_PASSWORD, 0, 10));
+        userMsg($data[0] == '1' ? 0 : 1, 'Login: ' . $loginTable[$data[0]]);
+        if ($data[0] == '3' && defined('CFG_TPI_PASSWORD')) {
+            sendTpi('005', substr(CFG_TPI_PASSWORD, 0, 10));
+        }
+        break;
+    case '921':
+        userMsg(1, 'Master Code Required');
+        if (defined('CFG_MASTER_CODE')) {
+            sendTpi('200', CFG_MASTER_CODE);
+        }
+        break;
+    case '922':
+        userMsg(1, 'Installer Code Required');
+        if (defined('CFG_INSTALLER_CODE')) {
+            sendTpi('200', CFG_INSTALLER_CODE);
         }
         break;
     }
@@ -117,7 +146,7 @@ function splitCmd(&$buf, &$data)
 }
 
 $in = fopen('php://stdin', 'r');
-$sock = fsockopen(TPI_HOST, TPI_PORT);
+$sock = fsockopen(CFG_TPI_HOST, CFG_TPI_PORT);
 
 
 $buf1 = $buf2 = '';
