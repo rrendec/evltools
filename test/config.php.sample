@@ -1,0 +1,7 @@
+<?php
+
+define('CFG_TPI_HOST',          '192.168.1.10');
+define('CFG_TPI_PORT',          4025);
+define('CFG_TPI_PASSWORD',      '');
+define('CFG_MASTER_CODE',       '1234');
+define('CFG_INSTALLER_CODE',    '6321');
