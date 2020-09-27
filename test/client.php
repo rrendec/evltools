@@ -57,8 +57,23 @@ function cmdCallback($cmd, $data)
     }
 }
 
+$host = CFG_TPI_HOST;
+$port = CFG_TPI_PORT;
+
+if ($_SERVER['argc'] > 1) {
+    $host = $_SERVER['argv'][1];
+}
+
+if ($_SERVER['argc'] > 2) {
+    $port = $_SERVER['argv'][2];
+}
+
 $in = fopen('php://stdin', 'r');
-$sock = fsockopen(CFG_TPI_HOST, CFG_TPI_PORT);
+$sock = fsockopen($host, $port);
+
+if (!$sock) {
+    exit(1);
+}
 
 $buf1 = $buf2 = '';
 while (true) {
