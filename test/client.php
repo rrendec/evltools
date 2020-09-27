@@ -75,33 +75,4 @@ if (!$sock) {
     exit(1);
 }
 
-$buf1 = $buf2 = '';
-while (true) {
-    $read = [$in, $sock];
-    $write = null;
-    $except = null;
-    if (stream_select($read, $write, $except, null) === false) {
-        break;
-    }
-
-    foreach ($read as $stream) {
-        $data = fread($stream, 4096);
-        if (!strlen($data)) {
-            break 2;
-        }
-
-        if ($stream == $in) {
-            splitCmd($buf1, $data);
-            foreach ($data as $line) {
-                if (strlen($line)) {
-                    handleCmdUser($line);
-                }
-            }
-        } elseif ($stream == $sock) {
-            splitCmd($buf2, $data);
-            foreach ($data as $line) {
-                handleCmdTpi($line, 'cmdCallback');
-            }
-        }
-    }
-}
+mainLoop('cmdCallback');

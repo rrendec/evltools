@@ -62,7 +62,7 @@ function handleCmdUser($data)
     sendTpi(substr($data, 0, 3), substr($data, 3));
 }
 
-function handleCmdTpi($data, $cb = null)
+function handleCmdTpi($data, $cmdCallback = null)
 {
     $now = new DateTime();
     printf("[%s] [%srecv%s] %s%s%s%s%s%s%s\n",
@@ -98,8 +98,8 @@ function handleCmdTpi($data, $cb = null)
 
     $data = substr($data, 3);
 
-	if (isset($cb)) {
-		call_user_func($cb, $cmd, $data);
+	if (isset($cmdCallback)) {
+		call_user_func($cmdCallback, $cmd, $data);
 	}
 }
 
@@ -110,4 +110,40 @@ function splitCmd(&$buf, &$data)
     foreach ($data as &$line) {
         $line = rtrim($line, "\r");
     }
+}
+
+function mainLoop($cmdCallback = null)
+{
+	global $in, $sock;
+
+	$buf1 = $buf2 = '';
+	while (true) {
+		$read = [$in, $sock];
+		$write = null;
+		$except = null;
+		if (stream_select($read, $write, $except, null) === false) {
+			break;
+		}
+
+		foreach ($read as $stream) {
+			$data = fread($stream, 4096);
+			if (!strlen($data)) {
+				break 2;
+			}
+
+			if ($stream == $in) {
+				splitCmd($buf1, $data);
+				foreach ($data as $line) {
+					if (strlen($line)) {
+						handleCmdUser($line);
+					}
+				}
+			} elseif ($stream == $sock) {
+				splitCmd($buf2, $data);
+				foreach ($data as $line) {
+					handleCmdTpi($line, $cmdCallback);
+				}
+			}
+		}
+	}
 }
